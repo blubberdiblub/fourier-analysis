@@ -151,8 +151,10 @@ class MyApp:
 
         self.frame_rate = None
         self.duty_cycle = None
-        self._target_delay = None
-        self._last_time = None
+        self._target_ticks = 1000 // 60
+        self._last_ticks = 0
+        self._target_delay = 1.0 / 60.0
+        self._last_time = 0.0
 
         if sdl2 and sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) == 0:
             self._event = sdl2.SDL_Event()
@@ -456,48 +458,57 @@ class MyApp:
             sdlgfx.SDL_setFramerate(self.fps_manager, math.ceil(frame_rate))
 
         elif self.sdl2_initialized:
-            self._target_delay = math.floor(1000 / frame_rate)
-            self._last_time = sdl2.SDL_GetTicks()
+            self._target_ticks = math.floor(1000 / frame_rate)
+            self._last_ticks = sdl2.SDL_GetTicks()
 
         else:
             self._target_delay = 1 / frame_rate
-            self._last_time = time.monotonic()
+
+        self.frame_rate = None
+        self.duty_cycle = None
+        self._last_time = time.monotonic()
 
     def render_delay(self):
 
+        duty_time = time.monotonic()
+
         if self.fps_manager:
-            delta_ticks = sdlgfx.SDL_framerateDelay(self.fps_manager)
-            self.frame_rate = 1000 / delta_ticks if delta_ticks > 0 else None
+            sdlgfx.SDL_framerateDelay(self.fps_manager)
 
         elif self.sdl2_initialized:
             while True:
                 current_ticks = sdl2.SDL_GetTicks()
-                delta_ticks = (current_ticks - self._last_time) & 0xffffffff
+                delta_ticks = (current_ticks - self._last_ticks) & 0xffffffff
 
-                if delta_ticks >= self._target_delay:
-                    self.frame_rate = 1000 / delta_ticks
+                if delta_ticks >= self._target_ticks:
                     break
 
-                sdl2.SDL_Delay(self._target_delay - delta_ticks)
+                sdl2.SDL_Delay(self._target_ticks - delta_ticks)
 
-            self._last_time = current_ticks
+            self._last_ticks = current_ticks
 
         else:
+
             while True:
-                current_time = time.monotonic()
-                delta_time = current_time - self._last_time
+                delta_time = time.monotonic() - self._last_time
 
                 if delta_time >= self._target_delay:
-                    self.frame_rate = 1 / delta_time
-                    break
-
-                if delta_time < 0:
-                    self.frame_rate = None
                     break
 
                 time.sleep(self._target_delay - delta_time)
 
-            self._last_time = current_time
+        current_time = time.monotonic()
+        frame_time = current_time - self._last_time
+
+        frame_rate = 1.0 / frame_time
+        self.frame_rate = (frame_rate if self.frame_rate is None
+                           else self.frame_rate * 0.99 + frame_rate * 0.01)
+
+        duty_cycle = (duty_time - self._last_time) / frame_time
+        self.duty_cycle = (duty_cycle if self.duty_cycle is None
+                           else self.duty_cycle * 0.99 + duty_cycle * 0.01)
+
+        self._last_time = current_time
 
     def loop(self):
 
