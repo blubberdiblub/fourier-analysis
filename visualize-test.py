@@ -150,6 +150,7 @@ class MyApp:
         self.fps_manager = None
 
         self.frame_rate = None
+        self.duty_cycle = None
         self._target_delay = None
         self._last_time = None
 
@@ -578,21 +579,27 @@ class MyApp:
             #     self.render_rect(x, y, w, h, 255, 255, 0)
 
             if self.frame_rate:
-                self.render_text(f"{self.frame_rate:.1f} FPS", 0, 0, 255, 255, 192)
+                self.render_text(f"{self.frame_rate:.1f} FPS", 0,
+                                 0, 255, 255, 192)
 
-            self.render_text(f"{self.width} x {self.height}", 1,
+            if self.duty_cycle is not None:
+                self.render_text(f"{self.duty_cycle*100.0:.1f}%", 1,
+                                 0, 255, 255, 192)
+
+            self.render_text(f"{self.width} x {self.height}", 2,
                              255, 0, 0, 192)
-            self.render_text(f"{fill}", 2, 0, 255, 0, 192)
-            self.render_text(f"{energy:.4f}", 3, 255, 255, 0, 192)
+            self.render_text(f"{fill}", 3, 0, 255, 0, 192)
+            self.render_text(f"{energy:.4f}", 4, 255, 255, 0, 192)
 
             if self.mouse_x is not None:
-                i = int((self.mouse_x + 0.5) / self.width * len(levels[1:961]) + 1)
-                self.render_text(f"{i * stft.rayleigh_frequency:.2f} Hz", 5)
+                i = int((self.mouse_x + 0.5) / self.width * len(levels[1:961])
+                        + 1)
+                self.render_text(f"{i * stft.rayleigh_frequency:.2f} Hz", 6)
 
             if self.mouse_y is not None:
                 y = (self.height - self.mouse_y - 0.5) / self.height
                 y = y * (self.max_level - self.min_level) + self.min_level
-                self.render_text(f"{y:.1f} dB", 6)
+                self.render_text(f"{y:.1f} dB", 7)
 
             self.render_present()
 
